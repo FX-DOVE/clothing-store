@@ -102,6 +102,7 @@ export default function Header() {
         </div>
 
         <div className="header-actions">
+          {/* Bag / account live in bottom nav on mobile */}
           <button
             type="button"
             className="icon-btn search-toggle"
@@ -112,7 +113,7 @@ export default function Header() {
             <SearchIcon />
           </button>
 
-          <div className="account-menu" ref={accountRef}>
+          <div className="account-menu header-desktop-only" ref={accountRef}>
             {user ? (
               <>
                 <button
@@ -138,10 +139,10 @@ export default function Header() {
             )}
           </div>
 
-          <Link to={user ? '/account/wishlist' : '/login'} className="wishlist-btn" aria-label="Wishlist" title="Wishlist">
+          <Link to={user ? '/account/wishlist' : '/login'} className="wishlist-btn header-desktop-only" aria-label="Wishlist" title="Wishlist">
             <HeartIcon />
           </Link>
-          <Link to="/cart" className="cart-link" aria-label={`Bag, ${cart.itemCount || 0} items`}>
+          <Link to="/cart" className="cart-link header-desktop-only" aria-label={`Bag, ${cart.itemCount || 0} items`}>
             <BagIcon />
             {(cart.itemCount || 0) > 0 && <span className="cart-badge">{cart.itemCount}</span>}
           </Link>

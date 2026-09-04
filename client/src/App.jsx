@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header.jsx';
+import MobileBottomNav from './components/MobileBottomNav.jsx';
 import Footer from './components/Footer.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
@@ -77,6 +78,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <MobileBottomNav />
     </div>
   );
 }
