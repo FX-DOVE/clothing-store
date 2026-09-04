@@ -67,6 +67,12 @@ export const api = {
   createOrder: (body) => request('/orders', { method: 'POST', body: JSON.stringify(body) }),
   getOrder: (id) => request(`/orders/${id}`),
 
+  getPaymentConfig: () => request('/payments/config'),
+  initializePayment: (body) =>
+    request('/payments/initialize', { method: 'POST', body: JSON.stringify(body) }),
+  verifyPayment: (body) =>
+    request('/payments/verify', { method: 'POST', body: JSON.stringify(body) }),
+
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: () => request('/auth/me'),

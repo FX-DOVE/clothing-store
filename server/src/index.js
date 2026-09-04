@@ -16,6 +16,12 @@ import {
   optionalAuth,
 } from './auth.js';
 import { sendAndStoreEmail } from './mail.js';
+import {
+  getPaystackConfig,
+  paystackEnabled,
+  initializeTransaction,
+  verifyTransaction,
+} from './paystack.js';
 
 dotenv.config();
 
@@ -312,67 +318,232 @@ app.delete('/api/cart', (req, res) => {
   res.json(enrichCart(db, cart));
 });
 
-/* ——— Orders (auth required) ——— */
-app.post('/api/orders', requireAuth, (req, res) => {
-  const db = getDb();
-  let cart =
+/* ——— Payments (Paystack) ——— */
+function validateShipping(shipping) {
+  return Boolean(
+    shipping?.fullName &&
+      shipping?.email &&
+      shipping?.address &&
+      shipping?.city &&
+      shipping?.postalCode &&
+      shipping?.country
+  );
+}
+
+function loadUserCart(db, req) {
+  return (
     db.get('carts').find({ userId: req.user.id }).value() ||
-    (cartId(req) ? db.get('carts').find({ id: cartId(req) }).value() : null);
-  if (!cart || !cart.items.length) return res.status(400).json({ error: 'Cart is empty' });
-  const { shipping, payment } = req.body || {};
-  if (
-    !shipping?.fullName ||
-    !shipping?.email ||
-    !shipping?.address ||
-    !shipping?.city ||
-    !shipping?.postalCode ||
-    !shipping?.country
-  ) {
-    return res.status(400).json({ error: 'Complete shipping details are required' });
-  }
-  if (!payment?.cardName || !payment?.cardNumber || !payment?.expiry || !payment?.cvc) {
-    return res.status(400).json({ error: 'Complete payment details are required (mock)' });
-  }
-  const enriched = enrichCart(db, cart);
+    (cartId(req) ? db.get('carts').find({ id: cartId(req) }).value() : null)
+  );
+}
+
+function computeOrderAmounts(enriched) {
   const shippingFee = enriched.subtotal >= 100 ? 0 : 8.5;
   const tax = Math.round(enriched.subtotal * 0.08 * 100) / 100;
+  const total = Math.round((enriched.subtotal + shippingFee + tax) * 100) / 100;
+  return { shippingFee, tax, total, subtotal: enriched.subtotal };
+}
+
+function createOrderFromPayment(db, { user, cart, enriched, amounts, shipping, paystackData, reference }) {
   const now = new Date().toISOString();
+  const cfg = getPaystackConfig();
   const order = {
     id: uuidv4(),
-    userId: req.user.id,
+    userId: user.id,
     createdAt: now,
     status: 'placed',
-    timeline: [{ status: 'placed', at: now, note: 'Order placed' }],
+    timeline: [{ status: 'placed', at: now, note: 'Order placed via Paystack' }],
     items: enriched.items,
-    subtotal: enriched.subtotal,
-    shippingFee,
-    tax,
-    total: Math.round((enriched.subtotal + shippingFee + tax) * 100) / 100,
+    subtotal: amounts.subtotal,
+    shippingFee: amounts.shippingFee,
+    tax: amounts.tax,
+    total: amounts.total,
     shipping,
     payment: {
-      method: 'card',
-      last4: String(payment.cardNumber).replace(/\s/g, '').slice(-4),
-      cardName: payment.cardName,
-      mock: true,
-      note: 'Demo only — no real charge was made.',
+      method: 'paystack',
+      reference,
+      paidAt: paystackData?.paid_at || now,
+      amount: amounts.total,
+      currency: cfg.currency,
+      channel: paystackData?.channel || null,
+      mock: false,
     },
+    paymentReference: reference,
   };
   db.get('orders').push(order).write();
   cart.items = [];
-  cart.userId = req.user.id;
+  cart.userId = user.id;
   cart.updatedAt = now;
   db.get('carts').find({ id: cart.id }).assign(cart).write();
 
+  const currencySymbol = cfg.currency === 'NGN' ? '₦' : cfg.currency + ' ';
   sendAndStoreEmail({
     to: shipping.email,
     subject: `Order confirmation · ${order.id.slice(0, 8)}`,
-    text: `Thank you for your order ${order.id}. Total: $${order.total}.`,
-    html: `<p>Thank you for your order <strong>${order.id}</strong>.</p><p>Total: $${order.total}</p>`,
+    text: `Thank you for your order ${order.id}. Total: ${currencySymbol}${order.total}. Paid via Paystack (${reference}).`,
+    html: `<p>Thank you for your order <strong>${order.id}</strong>.</p><p>Total: ${currencySymbol}${order.total}</p><p>Payment reference: ${reference}</p>`,
     type: 'order_confirmation',
-    meta: { orderId: order.id },
+    meta: { orderId: order.id, reference },
   }).catch((e) => console.error('email failed', e.message));
 
-  res.status(201).json(order);
+  return order;
+}
+
+app.get('/api/payments/config', (_req, res) => {
+  const { publicKey, currency, secretKey } = getPaystackConfig();
+  res.json({
+    publicKey: publicKey || '',
+    currency,
+    enabled: Boolean(secretKey && publicKey),
+  });
+});
+
+app.post('/api/payments/initialize', requireAuth, async (req, res) => {
+  try {
+    if (!paystackEnabled()) {
+      return res.status(503).json({
+        error:
+          'Paystack is not configured. Set PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY in the server environment.',
+      });
+    }
+    const db = getDb();
+    const { shipping } = req.body || {};
+    if (!validateShipping(shipping)) {
+      return res.status(400).json({ error: 'Complete shipping details are required' });
+    }
+    const cart = loadUserCart(db, req);
+    if (!cart || !cart.items.length) return res.status(400).json({ error: 'Cart is empty' });
+
+    const enriched = enrichCart(db, cart);
+    const amounts = computeOrderAmounts(enriched);
+    const reference = `atl_${uuidv4().replace(/-/g, '')}`;
+    const cfg = getPaystackConfig();
+    const callbackUrl =
+      process.env.PAYSTACK_CALLBACK_URL || `${CLIENT_ORIGIN}/checkout/callback`;
+
+    const pending = {
+      id: uuidv4(),
+      reference,
+      userId: req.user.id,
+      cartId: cart.id,
+      shipping,
+      amounts,
+      itemsSnapshot: enriched.items,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    db.get('payments').push(pending).write();
+
+    const data = await initializeTransaction({
+      email: shipping.email,
+      amountMajor: amounts.total,
+      reference,
+      callbackUrl,
+      metadata: {
+        userId: req.user.id,
+        cartId: cart.id,
+        custom_fields: [
+          { display_name: 'Cart ID', variable_name: 'cart_id', value: cart.id },
+          { display_name: 'User ID', variable_name: 'user_id', value: req.user.id },
+        ],
+      },
+    });
+
+    res.json({
+      authorization_url: data.authorization_url,
+      access_code: data.access_code,
+      reference: data.reference || reference,
+      publicKey: cfg.publicKey,
+      amount: amounts.total,
+      currency: cfg.currency,
+    });
+  } catch (err) {
+    console.error('payments/initialize', err.message);
+    res.status(err.status || 500).json({ error: err.message || 'Failed to initialize payment' });
+  }
+});
+
+app.post('/api/payments/verify', requireAuth, async (req, res) => {
+  try {
+    const { reference } = req.body || {};
+    if (!reference) return res.status(400).json({ error: 'Payment reference is required' });
+
+    const db = getDb();
+    const pending = db.get('payments').find({ reference }).value();
+    if (!pending) return res.status(404).json({ error: 'Payment not found' });
+    if (pending.userId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+
+    // Idempotent: order already created for this reference
+    const existing = db.get('orders').find({ paymentReference: reference }).value();
+    if (existing) return res.json(existing);
+
+    const data = await verifyTransaction(reference);
+    if (data.status !== 'success') {
+      return res.status(400).json({ error: `Payment not successful (status: ${data.status})` });
+    }
+
+    const paidMajor = Number(data.amount) / 100;
+    const expected = pending.amounts.total;
+    if (Math.abs(paidMajor - expected) > 0.05) {
+      console.warn('Paystack amount mismatch', { paidMajor, expected, reference });
+    }
+
+    let cart =
+      db.get('carts').find({ id: pending.cartId }).value() ||
+      loadUserCart(db, req);
+    if (!cart) {
+      cart = {
+        id: pending.cartId || uuidv4(),
+        items: [],
+        userId: req.user.id,
+        updatedAt: new Date().toISOString(),
+      };
+      db.get('carts').push(cart).write();
+    }
+
+    const orderEnriched = {
+      items: pending.itemsSnapshot?.length
+        ? pending.itemsSnapshot
+        : cart.items?.length
+          ? enrichCart(db, cart).items
+          : [],
+      subtotal: pending.amounts.subtotal,
+    };
+    if (!orderEnriched.items?.length) {
+      return res.status(400).json({
+        error:
+          'Cart no longer available after payment. Contact support with reference: ' + reference,
+      });
+    }
+
+    const order = createOrderFromPayment(db, {
+      user: req.user,
+      cart,
+      enriched: orderEnriched,
+      amounts: pending.amounts,
+      shipping: pending.shipping,
+      paystackData: data,
+      reference,
+    });
+
+    db.get('payments')
+      .find({ reference })
+      .assign({ status: 'paid', paidAt: new Date().toISOString(), orderId: order.id })
+      .write();
+
+    res.status(201).json(order);
+  } catch (err) {
+    console.error('payments/verify', err.message);
+    res.status(err.status || 500).json({ error: err.message || 'Failed to verify payment' });
+  }
+});
+
+/* ——— Orders (auth required) ——— */
+/** Mock card checkout disabled — orders are created only via Paystack verify. */
+app.post('/api/orders', requireAuth, (_req, res) => {
+  res.status(400).json({
+    error: 'Direct orders are disabled. Use Paystack checkout via POST /api/payments/initialize.',
+  });
 });
 
 app.get('/api/orders/:id', optionalAuth, (req, res) => {

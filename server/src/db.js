@@ -18,6 +18,7 @@ db.defaults({
   categories: [],
   carts: [],
   orders: [],
+  payments: [],
   users: [],
   returns: [],
   expenses: [],
@@ -44,6 +45,7 @@ export function ensureSeeded(products, categories, seedUsers = []) {
   if (!db.has('expenses').value()) db.set('expenses', []).write();
   if (!db.has('wishlists').value()) db.set('wishlists', {}).write();
   if (!db.has('sentEmails').value()) db.set('sentEmails', []).write();
+  if (!db.has('payments').value()) db.set('payments', []).write();
   if (!db.has('users').value()) db.set('users', seedUsers).write();
 }
 
@@ -52,6 +54,7 @@ export function forceSeed(products, categories, seedUsers = []) {
   db.set('categories', categories).write();
   db.set('carts', []).write();
   db.set('orders', []).write();
+  db.set('payments', []).write();
   db.set('users', seedUsers).write();
   db.set('returns', []).write();
   db.set('expenses', []).write();

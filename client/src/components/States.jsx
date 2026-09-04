@@ -1,5 +1,17 @@
-export function formatMoney(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
+/** Display currency — product prices are treated as NGN major units with Paystack. */
+export const DISPLAY_CURRENCY = 'NGN';
+
+export function formatMoney(n, currency = DISPLAY_CURRENCY) {
+  const code = (currency || DISPLAY_CURRENCY).toUpperCase();
+  try {
+    return new Intl.NumberFormat(code === 'NGN' ? 'en-NG' : 'en-US', {
+      style: 'currency',
+      currency: code,
+    }).format(n || 0);
+  } catch {
+    const prefix = code === 'NGN' ? '₦' : `${code} `;
+    return `${prefix}${Number(n || 0).toFixed(2)}`;
+  }
 }
 
 export function Loading({ label = 'Loading…' }) {

@@ -582,6 +582,7 @@ p { margin: 0 0 1rem; }
   font-size: 0.85rem;
   border-bottom: 1px solid var(--line);
 }
+.form-info { margin: 0.75rem 0; color: var(--muted); font-size: 0.9rem; }
 .demo-banner {
   background: var(--bg-soft);
   border: 1px solid var(--line);

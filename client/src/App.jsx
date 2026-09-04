@@ -7,6 +7,7 @@ import Shop from './pages/Shop.jsx';
 import ProductDetail from './pages/ProductDetail.jsx';
 import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
+import CheckoutCallback from './pages/CheckoutCallback.jsx';
 import OrderConfirmation from './pages/OrderConfirmation.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/callback" element={<CheckoutCallback />} />
           <Route path="/order/:id" element={<OrderConfirmation />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
