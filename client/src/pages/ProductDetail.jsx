@@ -2,22 +2,39 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useCart } from '../context/CartContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { Loading, ErrorState, formatMoney } from '../components/States.jsx';
+import ProductImageGallery from '../components/ProductImageGallery.jsx';
+
+const RECENT_KEY = 'atelier_recently_viewed';
+
+function pushRecentlyViewed(product) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    const next = [{ id: product.id, name: product.name, image: product.images?.[0] }, ...raw.filter((x) => x.id !== product.id)].slice(0, 8);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+}
 
 export default function ProductDetail() {
   const { id } = useParams();
   const { addItem } = useCart();
+  const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [qty, setQty] = useState(1);
-  const [imageIdx, setImageIdx] = useState(0);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [formError, setFormError] = useState('');
   const [wished, setWished] = useState(false);
+  const [wishBusy, setWishBusy] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [recent, setRecent] = useState([]);
 
   const load = async () => {
     setLoading(true);
@@ -27,6 +44,22 @@ export default function ProductDetail() {
       setProduct(p);
       setSize(p.sizes?.[0] || '');
       setColor(p.colors?.[0] || '');
+      pushRecentlyViewed(p);
+      try {
+        setRecent(JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').filter((x) => x.id !== p.id));
+      } catch {
+        setRecent([]);
+      }
+      if (user) {
+        try {
+          const wl = await api.getWishlist();
+          setWished((wl.productIds || []).includes(p.id));
+        } catch {
+          setWished(false);
+        }
+      } else {
+        setWished(false);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -34,7 +67,7 @@ export default function ProductDetail() {
     }
   };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); }, [id, user]);
 
   const onAdd = async () => {
     setFormError('');
@@ -54,6 +87,28 @@ export default function ProductDetail() {
     }
   };
 
+  const onWish = async () => {
+    if (!user) {
+      setFormError('Sign in to save items to your wishlist.');
+      return;
+    }
+    setWishBusy(true);
+    setFormError('');
+    try {
+      if (wished) {
+        await api.removeWishlist(product.id);
+        setWished(false);
+      } else {
+        await api.addWishlist(product.id);
+        setWished(true);
+      }
+    } catch (e) {
+      setFormError(e.message);
+    } finally {
+      setWishBusy(false);
+    }
+  };
+
   if (loading) return <Loading />;
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!product) return null;
@@ -63,18 +118,7 @@ export default function ProductDetail() {
   return (
     <div className="page product-detail">
       <div className="pdp-grid">
-        <div className="pdp-gallery">
-          <img src={product.images[imageIdx]} alt={product.name} />
-          {product.images.length > 1 && (
-            <div className="thumbs">
-              {product.images.map((src, i) => (
-                <button key={src} type="button" className={`thumb ${i === imageIdx ? 'active' : ''}`} onClick={() => setImageIdx(i)} aria-label={`Image ${i + 1}`}>
-                  <img src={src} alt="" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProductImageGallery images={product.images} alt={product.name} />
         <div className="pdp-info">
           {(product.newSeason || product.exclusive) && (
             <div className="pdp-badges">
@@ -103,6 +147,23 @@ export default function ProductDetail() {
                 <button key={s} type="button" className={`chip ${size === s ? 'selected' : ''}`} onClick={() => setSize(s)}>{s}</button>
               ))}
             </div>
+            <button type="button" className="size-guide-toggle" onClick={() => setSizeGuideOpen((v) => !v)}>
+              {sizeGuideOpen ? 'Hide size guide' : 'Size guide'}
+            </button>
+            {sizeGuideOpen && (
+              <div className="size-guide panel">
+                <p className="tiny muted">Stub guide — measure bust/waist/hip and compare to brand sizing. XS–XL typically map to EU 32–42.</p>
+                <table className="size-guide-table">
+                  <thead><tr><th>Size</th><th>Bust</th><th>Waist</th><th>Hip</th></tr></thead>
+                  <tbody>
+                    <tr><td>XS</td><td>80–84</td><td>62–66</td><td>86–90</td></tr>
+                    <tr><td>S</td><td>84–88</td><td>66–70</td><td>90–94</td></tr>
+                    <tr><td>M</td><td>88–92</td><td>70–74</td><td>94–98</td></tr>
+                    <tr><td>L</td><td>92–98</td><td>74–80</td><td>98–104</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </fieldset>
 
           <fieldset className="picker">
@@ -128,13 +189,28 @@ export default function ProductDetail() {
           <button
             type="button"
             className={`btn btn-secondary btn-block ${wished ? 'active' : ''}`}
-            onClick={() => setWished((v) => !v)}
+            onClick={onWish}
+            disabled={wishBusy}
             style={{ marginTop: '0.65rem' }}
           >
             {wished ? 'Saved to wishlist' : 'Add to wishlist'}
           </button>
         </div>
       </div>
+
+      {recent.length > 0 && (
+        <section className="section">
+          <div className="section-head"><h2>Recently viewed</h2></div>
+          <div className="recent-row">
+            {recent.map((r) => (
+              <Link key={r.id} to={`/product/${r.id}`} className="recent-card">
+                <img src={r.image} alt="" />
+                <span>{r.name}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

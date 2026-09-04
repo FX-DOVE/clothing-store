@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function SearchIcon() {
   return (
@@ -30,10 +31,21 @@ function BagIcon() {
 
 export default function Header() {
   const { cart } = useCart();
+  const { user, logout, isAdmin } = useAuth();
   const [q, setQ] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const onDoc = (e) => {
+      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
+    };
+    document.addEventListener('click', onDoc);
+    return () => document.removeEventListener('click', onDoc);
+  }, []);
 
   const onSearch = (e) => {
     e.preventDefault();
@@ -41,6 +53,12 @@ export default function Header() {
     navigate(term ? `/shop?q=${encodeURIComponent(term)}` : '/shop');
     setMenuOpen(false);
     setSearchOpen(false);
+  };
+
+  const onLogout = async () => {
+    setAccountOpen(false);
+    await logout();
+    navigate('/');
   };
 
   return (
@@ -93,9 +111,36 @@ export default function Header() {
           >
             <SearchIcon />
           </button>
-          <button type="button" className="wishlist-btn" aria-label="Wishlist" title="Wishlist">
+
+          <div className="account-menu" ref={accountRef}>
+            {user ? (
+              <>
+                <button
+                  type="button"
+                  className="icon-btn account-avatar"
+                  aria-label="Account menu"
+                  aria-expanded={accountOpen}
+                  onClick={() => setAccountOpen((v) => !v)}
+                >
+                  <span className="avatar-initial">{(user.name || 'A').charAt(0).toUpperCase()}</span>
+                </button>
+                {accountOpen && (
+                  <div className="account-dropdown" role="menu">
+                    <Link to="/account" role="menuitem" onClick={() => setAccountOpen(false)}>Dashboard</Link>
+                    <Link to="/account/orders" role="menuitem" onClick={() => setAccountOpen(false)}>Orders</Link>
+                    {isAdmin && <Link to="/admin" role="menuitem" onClick={() => setAccountOpen(false)}>Admin</Link>}
+                    <button type="button" role="menuitem" onClick={onLogout}>Logout</button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Link to="/login" className="icon-btn account-link" aria-label="Account">Account</Link>
+            )}
+          </div>
+
+          <Link to={user ? '/account/wishlist' : '/login'} className="wishlist-btn" aria-label="Wishlist" title="Wishlist">
             <HeartIcon />
-          </button>
+          </Link>
           <Link to="/cart" className="cart-link" aria-label={`Bag, ${cart.itemCount || 0} items`}>
             <BagIcon />
             {(cart.itemCount || 0) > 0 && <span className="cart-badge">{cart.itemCount}</span>}
