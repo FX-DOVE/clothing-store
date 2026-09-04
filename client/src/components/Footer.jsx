@@ -13,7 +13,7 @@ export default function Footer() {
           <Link to="/shop?category=outerwear">Outerwear</Link>
           <Link to="/cart">Bag</Link>
         </div>
-        <p className="muted tiny">Demo store — payments are mocked. No real charges.</p>
+        <p className="muted tiny">Demo store — pay securely with Paystack.</p>
       </div>
     </footer>
   );
