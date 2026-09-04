@@ -18,7 +18,7 @@ export default function Checkout() {
   if (!cart.items?.length) {
     return (
       <div className="page">
-        <EmptyState title="Nothing to checkout" message="Add items to your bag first." action={<Link className="btn btn-primary" to="/shop">Shop</Link>} />
+        <EmptyState title="Your bag is empty" message="Add items before checking out." action={<Link className="btn btn-primary" to="/shop">Shop</Link>} />
       </div>
     );
   }
@@ -87,7 +87,7 @@ export default function Checkout() {
           <div className="summary-row total"><span>Total</span><strong>{formatMoney(total)}</strong></div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>{submitting ? 'Placing order…' : 'Place order'}</button>
-          <Link className="btn btn-ghost btn-block" to="/cart">Back to cart</Link>
+          <Link className="btn btn-ghost btn-block" to="/cart">Back to bag</Link>
         </aside>
       </form>
     </div>

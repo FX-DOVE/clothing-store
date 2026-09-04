@@ -17,6 +17,7 @@ export default function ProductDetail() {
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [formError, setFormError] = useState('');
+  const [wished, setWished] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -57,6 +58,8 @@ export default function ProductDetail() {
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!product) return null;
 
+  const onSale = product.compareAtPrice && product.compareAtPrice > product.price;
+
   return (
     <div className="page product-detail">
       <div className="pdp-grid">
@@ -73,9 +76,24 @@ export default function ProductDetail() {
           )}
         </div>
         <div className="pdp-info">
-          <p className="eyebrow">{product.category}</p>
+          {(product.newSeason || product.exclusive) && (
+            <div className="pdp-badges">
+              {product.newSeason && <span className="product-badge">New Season</span>}
+              {product.exclusive && <span className="product-badge">Exclusive</span>}
+            </div>
+          )}
+          <p className="pdp-brand">{product.brand || 'Atelier'}</p>
           <h1>{product.name}</h1>
-          <p className="price">{formatMoney(product.price)}</p>
+          <div className="price-row">
+            {onSale ? (
+              <>
+                <span className="price price-sale">{formatMoney(product.price)}</span>
+                <span className="price-compare">{formatMoney(product.compareAtPrice)}</span>
+              </>
+            ) : (
+              <span className="price">{formatMoney(product.price)}</span>
+            )}
+          </div>
           <p className="lede">{product.description}</p>
 
           <fieldset className="picker">
@@ -102,10 +120,18 @@ export default function ProductDetail() {
           </label>
 
           {formError && <p className="form-error" role="alert">{formError}</p>}
-          {added && <p className="form-success" role="status">Added to bag. <Link to="/cart">View cart</Link></p>}
+          {added && <p className="form-success" role="status">Added to bag. <Link to="/cart">View bag</Link></p>}
 
           <button type="button" className="btn btn-primary btn-block" onClick={onAdd} disabled={adding}>
-            {adding ? 'Adding…' : 'Add to cart'}
+            {adding ? 'Adding…' : 'Add to bag'}
+          </button>
+          <button
+            type="button"
+            className={`btn btn-secondary btn-block ${wished ? 'active' : ''}`}
+            onClick={() => setWished((v) => !v)}
+            style={{ marginTop: '0.65rem' }}
+          >
+            {wished ? 'Saved to wishlist' : 'Add to wishlist'}
           </button>
         </div>
       </div>

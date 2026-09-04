@@ -64,7 +64,8 @@ app.get('/api/products', (req, res) => {
     list = list.filter((p) =>
       p.name.toLowerCase().includes(term) ||
       p.description.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term)
+      p.category.toLowerCase().includes(term) ||
+      (p.brand || '').toLowerCase().includes(term)
     );
   }
   if (minPrice) list = list.filter((p) => p.price >= Number(minPrice));

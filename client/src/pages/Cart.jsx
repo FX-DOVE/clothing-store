@@ -12,7 +12,7 @@ export default function Cart() {
     return (
       <div className="page">
         <EmptyState
-          title="Your bag is empty"
+          title="Your shopping bag is empty"
           message="Browse the collection and add something you love."
           action={<Link className="btn btn-primary" to="/shop">Continue shopping</Link>}
         />
@@ -22,7 +22,7 @@ export default function Cart() {
 
   return (
     <div className="page cart-page">
-      <h1>Your bag</h1>
+      <h1>Shopping bag</h1>
       <ul className="cart-list">
         {cart.items.map((item) => (
           <li key={item.itemId} className="cart-item">
@@ -55,7 +55,7 @@ export default function Cart() {
         </div>
         <p className="muted tiny">Shipping & tax calculated at checkout.</p>
         <Link className="btn btn-primary btn-block" to="/checkout">Checkout</Link>
-        <Link className="btn btn-secondary btn-block" to="/shop">Keep shopping</Link>
+        <Link className="btn btn-secondary btn-block" to="/shop">Continue shopping</Link>
       </div>
     </div>
   );

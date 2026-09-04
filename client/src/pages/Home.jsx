@@ -15,7 +15,7 @@ export default function Home() {
     setError(null);
     try {
       const [products, cats] = await Promise.all([api.getProducts(), api.getCategories()]);
-      setFeatured(products.filter((p) => p.featured).slice(0, 6));
+      setFeatured(products.filter((p) => p.featured).slice(0, 8));
       setCategories(cats);
     } catch (e) {
       setError(e.message);
@@ -32,11 +32,11 @@ export default function Home() {
   return (
     <div className="page home">
       <section className="hero">
-        <p className="eyebrow">New season</p>
-        <h1>Quiet luxury, everyday wear</h1>
-        <p className="lede">Curated tops, bottoms, outerwear, and accessories — designed for real life.</p>
+        <p className="eyebrow">New arrivals</p>
+        <h1>Designer clothing, curated for everyday luxury</h1>
+        <p className="lede">Discover refined pieces from independent labels — tops, bottoms, outerwear, and accessories.</p>
         <div className="hero-actions">
-          <Link className="btn btn-primary" to="/shop">Shop all</Link>
+          <Link className="btn btn-primary" to="/shop">Shop clothing</Link>
           <Link className="btn btn-secondary" to="/shop?category=outerwear">Explore outerwear</Link>
         </div>
       </section>
@@ -57,7 +57,7 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>Featured</h2>
+          <h2>Featured selection</h2>
           <Link to="/shop">View all</Link>
         </div>
         <div className="product-grid">
