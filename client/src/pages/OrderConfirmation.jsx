@@ -31,8 +31,7 @@ export default function OrderConfirmation() {
     <div className="page confirm-page">
       <p className="eyebrow">Thank you</p>
       <h1>Order confirmed</h1>
-      <p className="lede">Order <code>{order.id}</code> is confirmed. A receipt would be emailed in a real store.</p>
-      <div className="demo-banner" role="status">{order.payment?.note || 'Demo only — no real charge was made.'}</div>
+      <p className="lede">Order <code>{order.id}</code> is confirmed. A receipt is sent to {order.shipping?.email}. You can track this shipment from your account.</p>
       <section className="panel">
         <h2>Summary</h2>
         <ul className="summary-items">
@@ -45,7 +44,7 @@ export default function OrderConfirmation() {
         <div className="summary-row"><span>Tax</span><span>{formatMoney(order.tax)}</span></div>
         <div className="summary-row total"><span>Total</span><strong>{formatMoney(order.total)}</strong></div>
         <p className="muted">Ships to {order.shipping.fullName}, {order.shipping.address}, {order.shipping.city}</p>
-        <p className="muted">Card ending ···· {order.payment.last4}</p>
+        {order.payment?.reference && <p className="muted">Payment reference {order.payment.reference}</p>}
       </section>
       <Link className="btn btn-primary" to="/shop">Continue shopping</Link>
     </div>

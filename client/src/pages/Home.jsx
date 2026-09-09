@@ -32,12 +32,14 @@ export default function Home() {
   return (
     <div className="page home">
       <section className="hero">
-        <p className="eyebrow">New arrivals</p>
-        <h1>Designer clothing, curated for everyday luxury</h1>
-        <p className="lede">Discover refined pieces from independent labels — tops, bottoms, outerwear, and accessories.</p>
+        <p className="eyebrow">NG BABIES</p>
+        <h1>Baby clothes in Nigeria, soft cotton for newborns and toddlers</h1>
+        <p className="lede">
+          Shop soft cotton rompers, dresses, two-piece sets, and sleepwear sized for newborns through toddlers, with nationwide delivery across Nigeria.
+        </p>
         <div className="hero-actions">
-          <Link className="btn btn-primary" to="/shop">Shop clothing</Link>
-          <Link className="btn btn-secondary" to="/shop?category=outerwear">Explore outerwear</Link>
+          <Link className="btn btn-primary" to="/shop">Shop baby collection</Link>
+          <Link className="btn btn-secondary" to="/shop?category=outerwear">Cozy knitwear & jackets</Link>
         </div>
       </section>
 
@@ -57,7 +59,7 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>Featured selection</h2>
+          <h2>Featured baby favorites</h2>
           <Link to="/shop">View all</Link>
         </div>
         <div className="product-grid">

@@ -1,11 +1,27 @@
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-const CART_KEY = 'atelier_cart_id';
-const TOKEN_KEY = 'atelier_token';
+const CART_KEY = 'ngbabies_cart_id';
+const TOKEN_KEY = 'ngbabies_token';
+
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+      (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+    );
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export function getCartId() {
-  let id = localStorage.getItem(CART_KEY);
+  let id = localStorage.getItem(CART_KEY) || localStorage.getItem('atelier_cart_id');
   if (!id) {
-    id = crypto.randomUUID();
+    id = generateUUID();
     localStorage.setItem(CART_KEY, id);
   }
   return id;
@@ -16,16 +32,20 @@ export function setCartId(id) {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('atelier_token');
 }
 
 export function setToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  else {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('atelier_token');
+  }
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('atelier_token');
 }
 
 async function request(path, options = {}) {
@@ -37,7 +57,9 @@ async function request(path, options = {}) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const separator = path.includes('?') ? '&' : '?';
+  const url = `${API_URL}${path}${separator}_t=${Date.now()}`;
+  const res = await fetch(url, { ...options, headers, cache: 'no-store' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data.error || res.statusText || 'Request failed');

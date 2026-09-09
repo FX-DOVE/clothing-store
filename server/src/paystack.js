@@ -43,6 +43,22 @@ async function paystackRequest(path, { method = 'GET', body } = {}) {
 }
 
 /**
+ * Normalizes email address for Paystack:
+ * Trims whitespace and automatically maps local dev domains (.local, .test, localhost)
+ * to valid public domains (.com) so development/demo users do not fail Paystack's strict validator.
+ */
+export function normalizePaystackEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  let cleaned = email.trim();
+  if (/\.local$/i.test(cleaned)) {
+    cleaned = cleaned.replace(/\.local$/i, '.com');
+  } else if (/@localhost$/i.test(cleaned) || /\.test$/i.test(cleaned)) {
+    cleaned = cleaned.replace(/(@localhost|\.test)$/i, '@atelier.com');
+  }
+  return cleaned;
+}
+
+/**
  * Initialize a transaction. amountMajor is in major currency units (e.g. Naira);
  * Paystack expects subunits (kobo).
  */
@@ -55,6 +71,12 @@ export async function initializeTransaction({
   currency,
 }) {
   const cfg = getPaystackConfig();
+  const normalizedEmail = normalizePaystackEmail(email);
+  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    const err = new Error('A valid email address is required for payment');
+    err.status = 400;
+    throw err;
+  }
   const amount = Math.round(Number(amountMajor) * 100);
   if (!Number.isFinite(amount) || amount < 1) {
     const err = new Error('Invalid payment amount');
@@ -62,7 +84,7 @@ export async function initializeTransaction({
     throw err;
   }
   const payload = {
-    email,
+    email: normalizedEmail,
     amount,
     reference,
     currency: currency || cfg.currency,

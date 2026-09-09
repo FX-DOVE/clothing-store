@@ -1,6 +1,6 @@
-# Clothing Store (Atelier)
+# NG-BABIES — Baby & Kids Boutique
 
-See seed script for admin credentials.
+Curated baby and children's boutique clothing, comfy essentials, and cute accessories.
 
 ## Quick start
 
@@ -15,8 +15,8 @@ npm run dev
 
 ## Accounts
 
-- Admin: admin@atelier.local (password from seed output)
-- Demo: demo@atelier.local (password from seed output)
+- Admin: admin@ngbabies.com (password: Admin123!)
+- Demo: demo@ngbabies.com (password: Demo123!)
 
 ## Features
 

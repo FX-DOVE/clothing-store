@@ -21,6 +21,7 @@ import {
   paystackEnabled,
   initializeTransaction,
   verifyTransaction,
+  normalizePaystackEmail,
 } from './paystack.js';
 
 dotenv.config();
@@ -29,9 +30,33 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (origin === CLIENT_ORIGIN) return true;
+  return /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
+    origin
+  );
+};
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
+app.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 function cartId(req) {
   return req.headers['x-cart-id'] || req.query.cartId || null;
@@ -158,7 +183,17 @@ app.post('/api/auth/login', async (req, res) => {
     const db = getDb();
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-    const user = db.get('users').find({ email: String(email).trim().toLowerCase() }).value();
+    const normalized = String(email).trim().toLowerCase();
+    const comEmail = normalized.replace(/\.local$/i, '.com');
+    const localEmail = normalized.replace(/\.com$/i, '.local');
+    const user = db.get('users').find(
+      (u) =>
+        u.email === normalized ||
+        u.email === comEmail ||
+        u.email === localEmail ||
+        u.email.replace(/@(ngbabies|atelier)\.(com|local)$/i, '') ===
+          normalized.replace(/@(ngbabies|atelier)\.(com|local)$/i, '')
+    ).value();
     if (!user || !(await comparePassword(password, user.passwordHash))) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -320,13 +355,15 @@ app.delete('/api/cart', (req, res) => {
 
 /* ——— Payments (Paystack) ——— */
 function validateShipping(shipping) {
+  const email = (shipping?.email || '').trim();
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   return Boolean(
-    shipping?.fullName &&
-      shipping?.email &&
-      shipping?.address &&
-      shipping?.city &&
-      shipping?.postalCode &&
-      shipping?.country
+    shipping?.fullName?.trim() &&
+      validEmail &&
+      shipping?.address?.trim() &&
+      shipping?.city?.trim() &&
+      shipping?.postalCode?.trim() &&
+      shipping?.country?.trim()
   );
 }
 
@@ -359,6 +396,10 @@ function createOrderFromPayment(db, { user, cart, enriched, amounts, shipping, p
     tax: amounts.tax,
     total: amounts.total,
     shipping,
+    shippingMethod: 'Nationwide delivery',
+    estimatedDelivery: '3-5 working days',
+    trackingNumber: '',
+    carrier: 'NG BABIES delivery',
     payment: {
       method: 'paystack',
       reference,
@@ -409,7 +450,7 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
     const db = getDb();
     const { shipping } = req.body || {};
     if (!validateShipping(shipping)) {
-      return res.status(400).json({ error: 'Complete shipping details are required' });
+      return res.status(400).json({ error: 'Complete shipping details and a valid email are required' });
     }
     const cart = loadUserCart(db, req);
     if (!cart || !cart.items.length) return res.status(400).json({ error: 'Cart is empty' });
@@ -418,8 +459,9 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
     const amounts = computeOrderAmounts(enriched);
     const reference = `atl_${uuidv4().replace(/-/g, '')}`;
     const cfg = getPaystackConfig();
+    const originHost = req.headers.origin || CLIENT_ORIGIN;
     const callbackUrl =
-      process.env.PAYSTACK_CALLBACK_URL || `${CLIENT_ORIGIN}/checkout/callback`;
+      process.env.PAYSTACK_CALLBACK_URL || `${originHost}/checkout/callback`;
 
     const pending = {
       id: uuidv4(),
@@ -435,7 +477,7 @@ app.post('/api/payments/initialize', requireAuth, async (req, res) => {
     db.get('payments').push(pending).write();
 
     const data = await initializeTransaction({
-      email: shipping.email,
+      email: normalizePaystackEmail(shipping.email),
       amountMajor: amounts.total,
       reference,
       callbackUrl,
@@ -702,7 +744,7 @@ app.post('/api/admin/products', requireAdmin, (req, res) => {
   const product = {
     id: body.id || `p-${uuidv4().slice(0, 8)}`,
     name: body.name,
-    brand: body.brand || 'Atelier',
+    brand: body.brand || 'NG BABIES',
     category: body.category,
     price: Number(body.price),
     compareAtPrice: body.compareAtPrice ? Number(body.compareAtPrice) : undefined,
@@ -760,15 +802,30 @@ app.patch('/api/admin/orders/:id', requireAdmin, (req, res) => {
   const db = getDb();
   const order = db.get('orders').find({ id: req.params.id }).value();
   if (!order) return res.status(404).json({ error: 'Order not found' });
-  const { status } = req.body || {};
+  const body = req.body || {};
+  const { status } = body;
   const allowed = ['placed', 'processing', 'shipped', 'delivered', 'cancelled'];
   if (!allowed.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
   }
+  if (Object.prototype.hasOwnProperty.call(body, 'trackingNumber')) {
+    order.trackingNumber = String(body.trackingNumber ?? '').trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'carrier')) {
+    const nextCarrier = String(body.carrier ?? '').trim();
+    order.carrier = nextCarrier || order.carrier || 'NG BABIES delivery';
+  }
+  if (status === 'shipped') {
+    if (!order.trackingNumber) order.trackingNumber = '';
+    if (!order.carrier) order.carrier = 'NG BABIES delivery';
+  }
   const now = new Date().toISOString();
   order.status = status;
   order.timeline = order.timeline || [];
-  order.timeline.push({ status, at: now, note: `Status updated to ${status}` });
+  const note = order.trackingNumber
+    ? `Status updated to ${status}. Tracking ${order.trackingNumber}`
+    : `Status updated to ${status}`;
+  order.timeline.push({ status, at: now, note });
   db.get('orders').find({ id: order.id }).assign(order).write();
   res.json(order);
 });
@@ -870,6 +927,8 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Clothing Store API listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`NG BABIES API listening on:`);
+  console.log(`  - Local:   http://localhost:${PORT}`);
+  console.log(`  - Network: http://192.168.1.125:${PORT}`);
 });

@@ -8,15 +8,15 @@ export function buildSeedUsers() {
     {
       id: 'u-admin',
       name: 'Admin',
-      email: 'admin@atelier.local',
+      email: 'admin@ngbabies.com',
       passwordHash: bcrypt.hashSync('Admin123!', 10),
       role: 'admin',
       createdAt: now,
     },
     {
       id: 'u-demo',
-      name: 'Demo User',
-      email: 'demo@atelier.local',
+      name: 'Demo Parent',
+      email: 'demo@ngbabies.com',
       passwordHash: bcrypt.hashSync('Demo123!', 10),
       role: 'customer',
       createdAt: now,

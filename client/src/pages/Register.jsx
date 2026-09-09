@@ -34,7 +34,7 @@ export default function Register() {
   return (
     <div className="page auth-page">
       <h1>Create account</h1>
-      <p className="lede">Join Atelier to track orders and save wishlist items.</p>
+      <p className="lede">Join NG BABIES to track orders and save wishlist items.</p>
       <form className="panel auth-form" onSubmit={onSubmit}>
         <label className="field">
           <span>Name</span>

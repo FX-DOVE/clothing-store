@@ -33,7 +33,7 @@ export default function Login() {
   return (
     <div className="page auth-page">
       <h1>Sign in</h1>
-      <p className="lede">Welcome back to Atelier.</p>
+      <p className="lede">Welcome back to NG BABIES.</p>
       <form className="panel auth-form" onSubmit={onSubmit}>
         <label className="field">
           <span>Email</span>

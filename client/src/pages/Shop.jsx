@@ -4,14 +4,14 @@ import { api } from '../api/client.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { Loading, ErrorState, EmptyState } from '../components/States.jsx';
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', '24', '26', '28', '30', '32', '34', 'One Size'];
-const COLORS = ['Black', 'Ivory', 'Navy', 'Cream', 'Camel', 'Olive', 'Sage', 'White', 'Charcoal', 'Tan'];
+const SIZES = ['0-3M', '3-6M', '6-12M', '12-18M', '18-24M', '2T', '3T', '4T', 'XS', 'S', 'M', 'L', 'One Size'];
+const COLORS = ['White', 'Cream', 'Sage', 'Ivory', 'Blush', 'Sky Blue', 'Camel', 'Navy', 'Olive', 'Charcoal'];
 
 const CATEGORY_TITLES = {
-  tops: 'Designer Tops for Women',
-  bottoms: 'Designer Bottoms for Women',
-  outerwear: 'Designer Outerwear for Women',
-  accessories: 'Designer Accessories for Women',
+  tops: 'Baby Tops, Bodysuits & Rompers',
+  bottoms: 'Baby Bottoms, Pants & Bloomers',
+  outerwear: 'Baby Knitwear, Cardigans & Jackets',
+  accessories: 'Baby Essentials, Bibs & Footwear',
 };
 
 export default function Shop() {
@@ -35,7 +35,7 @@ export default function Shop() {
   const pageTitle = useMemo(() => {
     if (query.q) return `Results for “${query.q}”`;
     if (query.category && CATEGORY_TITLES[query.category]) return CATEGORY_TITLES[query.category];
-    return 'Designer Clothing for Women';
+    return 'NG BABIES | Baby clothes in Nigeria';
   }, [query.q, query.category]);
 
   const load = async () => {
@@ -96,11 +96,11 @@ export default function Shop() {
         <p className="filter-group-title">Price</p>
         <div className="field-row">
           <label className="field">
-            <span>Min $</span>
+            <span>Min (NGN)</span>
             <input type="number" min="0" inputMode="decimal" value={query.minPrice} onChange={(e) => update('minPrice', e.target.value)} />
           </label>
           <label className="field">
-            <span>Max $</span>
+            <span>Max (NGN)</span>
             <input type="number" min="0" inputMode="decimal" value={query.maxPrice} onChange={(e) => update('maxPrice', e.target.value)} />
           </label>
         </div>
@@ -135,7 +135,6 @@ export default function Shop() {
   return (
     <div className="page shop">
       <div className="shop-page-title">
-        <p className="eyebrow">Women</p>
         <h1>{pageTitle}</h1>
       </div>
 

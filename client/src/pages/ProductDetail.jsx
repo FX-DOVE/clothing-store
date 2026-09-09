@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { Loading, ErrorState, formatMoney } from '../components/States.jsx';
 import ProductImageGallery from '../components/ProductImageGallery.jsx';
 
-const RECENT_KEY = 'atelier_recently_viewed';
+const RECENT_KEY = 'ngbabies_recently_viewed';
 
 function pushRecentlyViewed(product) {
   try {
@@ -46,7 +46,13 @@ export default function ProductDetail() {
       setColor(p.colors?.[0] || '');
       pushRecentlyViewed(p);
       try {
-        setRecent(JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').filter((x) => x.id !== p.id));
+        const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+        const cleaned = raw.filter((x) => x.id && x.id.startsWith('b'));
+        if (cleaned.length !== raw.length) {
+          localStorage.setItem(RECENT_KEY, JSON.stringify(cleaned));
+          localStorage.removeItem('atelier_recently_viewed');
+        }
+        setRecent(cleaned.filter((x) => x.id !== p.id));
       } catch {
         setRecent([]);
       }
@@ -126,7 +132,7 @@ export default function ProductDetail() {
               {product.exclusive && <span className="product-badge">Exclusive</span>}
             </div>
           )}
-          <p className="pdp-brand">{product.brand || 'Atelier'}</p>
+          <p className="pdp-brand">{product.brand || 'NG BABIES'}</p>
           <h1>{product.name}</h1>
           <div className="price-row">
             {onSale ? (

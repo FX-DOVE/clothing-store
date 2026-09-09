@@ -75,13 +75,13 @@ export default function Header() {
         </button>
 
         <Link to="/" className="logo" onClick={() => setMenuOpen(false)}>
-          Atelier
+          NG BABIES
         </Link>
 
         <nav className={`nav ${menuOpen ? 'nav-open' : ''}`} aria-label="Primary">
           <NavLink to="/" end onClick={() => setMenuOpen(false)}>Home</NavLink>
-          <NavLink to="/shop" onClick={() => setMenuOpen(false)}>Clothing</NavLink>
-          <NavLink to="/shop?category=tops" onClick={() => setMenuOpen(false)}>Tops</NavLink>
+          <NavLink to="/shop" onClick={() => setMenuOpen(false)}>All Baby Clothes</NavLink>
+          <NavLink to="/shop?category=tops" onClick={() => setMenuOpen(false)}>Tops & Rompers</NavLink>
           <NavLink to="/shop?category=bottoms" onClick={() => setMenuOpen(false)}>Bottoms</NavLink>
           <NavLink to="/shop?category=outerwear" onClick={() => setMenuOpen(false)}>Outerwear</NavLink>
           <NavLink to="/shop?category=accessories" onClick={() => setMenuOpen(false)}>Accessories</NavLink>

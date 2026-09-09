@@ -27,14 +27,20 @@ db.defaults({
 }).write();
 
 export function getDb() {
+  db.read();
   return db;
 }
 
 export function ensureSeeded(products, categories, seedUsers = []) {
-  const current = db.get('products').value();
-  if (!current || current.length === 0) {
+  db.read();
+  const current = db.get('products').value() || [];
+  const needsCatalogRefresh =
+    current.length === 0 ||
+    current.some((p) => !p || !p.id || !String(p.id).startsWith('b') || !String(p.name || '').trim());
+  if (needsCatalogRefresh) {
     db.set('products', products).write();
     db.set('categories', categories).write();
+    db.set('carts', []).write();
   }
   const users = db.get('users').value() || [];
   if (users.length === 0 && seedUsers.length) {

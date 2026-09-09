@@ -56,7 +56,7 @@ export default function Checkout() {
       setShipping((s) => ({
         ...s,
         fullName: s.fullName || user.name || '',
-        email: s.email || user.email || '',
+        email: s.email || (user.email ? user.email.replace(/\.local$/i, '.com') : ''),
       }));
     }
   }, [user]);
@@ -87,6 +87,11 @@ export default function Checkout() {
     e.preventDefault();
     if (!user) {
       setError('Please sign in to place your order.');
+      return;
+    }
+    const trimmedEmail = (shipping.email || '').trim();
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Please provide a valid email address.');
       return;
     }
     setError('');
@@ -124,11 +129,6 @@ export default function Checkout() {
   return (
     <div className="page checkout-page">
       <h1>Checkout</h1>
-      <div className="demo-banner" role="note">
-        <strong>Pay with Paystack.</strong> Cards, bank transfer, USSD, and more. You will complete
-        payment in the secure Paystack popup.
-      </div>
-
       {!user || !authedStep ? (
         <AuthGate title="Create account or sign in to checkout" onSuccess={() => setAuthedStep(true)} />
       ) : (

@@ -5,15 +5,15 @@ export default function Footer() {
     <footer className="site-footer">
       <div className="footer-inner">
         <div>
-          <p className="footer-brand">Atelier</p>
-          <p className="muted">Curated designer clothing and modern essentials.</p>
+          <p className="footer-brand">NG BABIES</p>
+          <p className="muted">Soft cotton baby clothes, rompers, and sets for newborns and toddlers, with nationwide delivery in Nigeria.</p>
         </div>
         <div className="footer-links">
-          <Link to="/shop">Shop all</Link>
-          <Link to="/shop?category=outerwear">Outerwear</Link>
+          <Link to="/shop">Shop collection</Link>
+          <Link to="/shop?category=outerwear">Knitwear</Link>
           <Link to="/cart">Bag</Link>
         </div>
-        <p className="muted tiny">Demo store — pay securely with Paystack.</p>
+        <p className="muted tiny">NG BABIES — baby clothes in Nigeria. Pay securely with Paystack.</p>
       </div>
     </footer>
   );

@@ -3,8 +3,8 @@ import { api } from '../../api/client.js';
 import { Loading, ErrorState, formatMoney } from '../../components/States.jsx';
 
 const empty = {
-  name: '', brand: 'Atelier', category: 'tops', price: '', compareAtPrice: '',
-  description: '', sizes: 'XS,S,M,L,XL', colors: 'Black,Ivory',
+  name: '', brand: 'NG BABIES', category: 'tops', price: '', compareAtPrice: '',
+  description: '', sizes: '0-3M, 3-6M, 6-12M, 12-18M, 18-24M', colors: 'White, Cream, Sage, Blush, Sky Blue',
   images: '', featured: false, newSeason: false, exclusive: false,
 };
 

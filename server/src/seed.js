@@ -3,4 +3,4 @@ import { products, categories } from './seedData.js';
 import { buildSeedUsers } from './seedUsers.js';
 
 forceSeed(products, categories, buildSeedUsers());
-console.log('Seeded admin@atelier.local / Admin123! and demo@atelier.local / Demo123!');
+console.log('Seeded admin@ngbabies.com / Admin123! and demo@ngbabies.com / Demo123!');

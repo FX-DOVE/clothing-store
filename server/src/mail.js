@@ -39,7 +39,7 @@ async function getTransporter() {
 
 export async function sendAndStoreEmail({ to, subject, text, html, type = 'general', meta = {} }) {
   const transporter = await getTransporter();
-  const from = process.env.SMTP_FROM || 'Atelier <noreply@atelier.local>';
+  const from = process.env.SMTP_FROM || 'NG-BABIES <noreply@ngbabies.com>';
   let info;
   try {
     info = await transporter.sendMail({ from, to, subject, text, html });

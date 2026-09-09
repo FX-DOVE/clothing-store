@@ -69,7 +69,7 @@ export default function ProductCard({ product, wishlistIds, onWishlistChange }) 
           <img src={product.images?.[0]} alt="" loading="lazy" />
         </div>
         <div className="product-card-body">
-          <p className="product-brand">{product.brand || 'Atelier'}</p>
+          <p className="product-brand">{product.brand || 'NG BABIES'}</p>
           <h3 className="product-name">{product.name}</h3>
           <div className="price-row">
             {onSale ? (
