@@ -69,6 +69,26 @@ async function request(path, options = {}) {
   return data;
 }
 
+
+async function uploadRequest(path, formData) {
+  const headers = {
+    'x-cart-id': getCartId(),
+  };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const separator = path.includes('?') ? '&' : '?';
+  const url = `${API_URL}${path}${separator}_t=${Date.now()}`;
+  const res = await fetch(url, { method: 'POST', headers, body: formData, cache: 'no-store' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || res.statusText || 'Upload failed');
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
 export const api = {
   getProducts: (params = {}) => {
     const qs = new URLSearchParams();
@@ -117,6 +137,11 @@ export const api = {
   adminUpdateProduct: (id, body) =>
     request(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   adminDeleteProduct: (id) => request(`/admin/products/${id}`, { method: 'DELETE' }),
+  adminUploadImage: (file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return uploadRequest('/admin/uploads', fd);
+  },
   adminOrders: () => request('/admin/orders'),
   adminUpdateOrder: (id, body) =>
     request(`/admin/orders/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),

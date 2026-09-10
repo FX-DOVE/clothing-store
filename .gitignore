@@ -9,3 +9,5 @@ server/data/db.json
 server/data/*.db
 .vite/
 coverage/
+server/uploads/*
+!server/uploads/.gitkeep

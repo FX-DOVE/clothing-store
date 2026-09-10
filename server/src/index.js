@@ -3,6 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { getDb, ensureSeeded } from './db.js';
 import { products as seedProducts, categories as seedCategories } from './seedData.js';
 import { buildSeedUsers } from './seedUsers.js';
@@ -57,6 +61,31 @@ app.use((_req, res, next) => {
   res.set('Expires', '0');
   next();
 });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+
+const imageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
+    const safeExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext) ? ext : '.jpg';
+    cb(null, `${Date.now()}-${uuidv4().slice(0, 8)}${safeExt}`);
+  },
+});
+
+const uploadImage = multer({
+  storage: imageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
+    cb(new Error('Only image uploads are allowed'));
+  },
+});
+
+app.use('/uploads', express.static(uploadsDir));
 
 function cartId(req) {
   return req.headers['x-cart-id'] || req.query.cartId || null;
@@ -728,6 +757,17 @@ app.get('/api/admin/stats', requireAdmin, (_req, res) => {
     productCount: products.length,
     expenseTotal: Math.round(expenseTotal * 100) / 100,
     userCount: (db.get('users').value() || []).length,
+  });
+});
+
+app.post('/api/admin/uploads', requireAdmin, (req, res) => {
+  uploadImage.single('image')(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Image must be 5MB or smaller' : err.message || 'Upload failed';
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: 'image file is required' });
+    return res.status(201).json({ url: `/uploads/${req.file.filename}` });
   });
 });
 
