@@ -3,6 +3,22 @@ import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
+
+function MenuIcon({ open = false }) {
+  if (open) {
+    return (
+      <svg className="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
 function SearchIcon() {
   return (
     <svg className="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
@@ -71,7 +87,7 @@ export default function Header() {
           aria-expanded={menuOpen}
           onClick={() => { setMenuOpen((v) => !v); setSearchOpen(false); }}
         >
-          <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
+          <MenuIcon open={menuOpen} />
         </button>
 
         <Link to="/" className="logo" onClick={() => setMenuOpen(false)}>
